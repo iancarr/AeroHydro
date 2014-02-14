@@ -49,7 +49,6 @@ plt.xlim(xStart,xEnd)
 plt.ylim(yStart,yEnd)
 plt.streamplot(X,Y,uSource,vSource,density=1.0,linewidth=1,arrowsize=2,arrowstyle='->')
 plt.scatter(xSource,ySource,c='k',s=100,marker='x')
-plt.show()
 #computing the velocity components at every point on the mesh
 #sink
                     
@@ -90,4 +89,24 @@ plt.xlabel('x',fontsize=16)
 plt.ylabel('y',fontsize=16)
 plt.streamplot(X,Y,uPair,vPair,density=2.0,linewidth=1,arrowsize=2,arrowstyle='->')
 plt.scatter([xSource,xSink],[ySource,ySink],c='r',s=80,marker='o')
+
+# calculating the potential of a source/sink
+phiSource = np.empty((N,N),dtype=float)
+phiSink = np.empty((N,N),dtype=float)
+
+for i in range(N):
+    for j in range(N):
+        phiSource[i,j] = strengthSource/(2*pi)*np.log((X[i,j]-xSource)**2+(Y[i,j]-ySource)**2)
+        phiSink[i,j] = -strengthSource/(2*pi)*np.log((X[i,j]-xSink)**2+(Y[i,j]-ySink)**2)
+
+phi = phiSource + phiSink
+
+# plotting the potenial
+size = 10
+plt.figure(figsize=(size,(yEnd-yStart)/(xEnd-xStart)*size))
+plt.xlabel('x',fontsize=16)
+plt.ylabel('y',fontsize=16)
+plt.xlim(xStart,xEnd)
+plt.ylim(yStart,yEnd)
+plt.contourf(X,Y,phi,levels=[1.0,2.0,100])
 plt.show()
