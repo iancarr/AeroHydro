@@ -16,7 +16,7 @@ X,Y = np.meshgrid(x,y)              #defining the meshgrid
 
 # defining vortex parameters
 gamma = 1.0                         # defining vortex strength
-nVortex = 10
+nVortex = 100
 
 # creating array of vortex position
 xVortex = np.linspace(xStart,xEnd,nVortex)
@@ -40,9 +40,7 @@ v = np.zeros_like(Y)
 
 # loop to produce n vortices at given positions
 for i in range(nVortex):
-    xv = xVortex[i]                 # defining position of current vortex
-    yv = yVortex[i]
-    uVortex,vVortex = getVelocityVortex(gamma,xv,yv,X,Y)
+    uVortex,vVortex = getVelocityVortex(gamma,xVortex[i],yVortex[i],X,Y)
     u = u+uVortex                   # adding to final plot
     v = v+vVortex
     
@@ -64,7 +62,11 @@ plt.show()
 a = xVortex[2]-xVortex[1]
 
 # defining points at the center of the vortices
-xInfVortex = xVortex-(a*0.5)             # not sure why these are offset by a*.5
+if nVortex % 2 ==0:
+    xInfVortex = xVortex-(a*0.5)             # not sure why these are offset by a*.5
+else:
+    xInfVortex = xVortex
+
 yInfVortex = np.zeros_like(xInfVortex)
 
 # defining shape of velocity components for infinite row
