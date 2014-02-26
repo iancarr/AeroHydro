@@ -16,12 +16,11 @@ X,Y = np.meshgrid(x,y)              #defining the meshgrid
 
 # defining vortex parameters
 gamma = 1.0                         # defining vortex strength
-nVortex = 100
+nVortex = 10
 
 # creating array of vortex position
 xVortex = np.linspace(xStart,xEnd,nVortex)
 yVortex = np.zeros_like(xVortex)
-# xVortex,yVortex = np.meshgrid(xv,yv)
 
 # defining a function to calculate the velocity due to a vortex
 def getVelocityVortex(strength,xv,yv,X,Y):
@@ -63,7 +62,7 @@ a = xVortex[2]-xVortex[1]
 
 # defining points at the center of the vortices
 if nVortex % 2 ==0:
-    xInfVortex = xVortex-(a*0.5)             # not sure why these are offset by a*.5
+    xInfVortex = xVortex-(a*0.5)
 else:
     xInfVortex = xVortex
 
