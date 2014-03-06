@@ -1,8 +1,0 @@
-# notebook 5 - infinite row of vortices
-# started 18feb2014
-# Ian Carr
-
-import numpy as np
-import matplotlib.pyplot as plt
-from math import *
-

@@ -15,7 +15,7 @@ y = np.linspace(yStart,yEnd,N)
 X,Y = np.meshgrid(x,y)
 
 # defining doublet parameters - code borrowed from notbook 3 doublet
-kappa = 1.0                     # strength of the doublet
+kappa = 2.0                     # strength of the doublet
 xDoublet,yDoublet = 0.0,0.0     # location of the doublet
 
 # function to compute doublet velocity 
@@ -72,7 +72,7 @@ xStagn2,yStagn2 = -np.sqrt(kappa/(2*pi*Uinf)),0
 plt.scatter([xStagn1,xStagn2],[yStagn1,yStagn2],c='g',s=80,marker='o')
 
 # defining a vortex located at the origin
-gamma = 3.0             # strength of a vortex
+gamma = 7.5            # strength of a vortex
 xVortex,yVortex = 0.0,0.0
 
 # defining functions to compute the stream fn and velcity of a vortex
@@ -115,6 +115,28 @@ plt.gca().add_patch(circle)
 R = np.sqrt(kappa/(2*pi*Uinf))
 xStagn1,yStagn1 = +np.sqrt(R**2-(gamma/(4*pi*Uinf))**2),(-gamma/(4*pi*Uinf))
 xStagn2,yStagn2 = -np.sqrt(R**2-(gamma/(4*pi*Uinf))**2),(-gamma/(4*pi*Uinf))
+
 plt.scatter(xVortex,yVortex,s=80,c='r',marker='o')
 plt.scatter([xStagn1,xStagn2],[yStagn1,yStagn2],s=80,c='g')
+plt.show()
+
+# calculating pressure coefficient on the cylinder
+theta = np.linspace(0,2*pi,100)
+utheta = -2*Uinf*np.sin(theta)-(gamma/(2*pi*R))
+Cp = 1-(utheta**2/Uinf**2)
+
+# pressure coefficient in the case that there is no vortex
+utheta_NoVortex = -2*Uinf*np.sin(theta)
+Cp_NoVortex = 1-(utheta_NoVortex**2/Uinf**2)
+
+# plotting
+size = 10
+plt.figure(size,figsize=(size,size))
+plt.grid(True)
+plt.xlabel(r'$\theta$',fontsize=18)
+plt.ylabel(r'$C_p$',fontsize=18)
+plt.xlim(theta.min(),theta.max())
+plt.plot(theta,Cp,color='r',linewidth=2,linestyle='-')
+plt.plot(theta,Cp_NoVortex,color='g',linewidth=2,linestyle='-')
+plt.legend(['vortex','no vortex'],loc='best')
 plt.show()

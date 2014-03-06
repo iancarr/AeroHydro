@@ -1,8 +1,0 @@
-# notebook 3 - doublet
-# started 2 feb 2014
-# Ian Carr
-
-import numpy as np
-import matplotlib.pyplot as plt
-from math import *
-
