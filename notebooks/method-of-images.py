@@ -47,7 +47,7 @@ u = source.u + sourceImage.u
 v = source.v + sourceImage.v
 psi = source.psi + sourceImage.psi
 
-# plottinge
+# plotting
 size = 10
 plt.figure(num=0,figsize=(size,(yEnd-yStart)/(xEnd-xStart)*size))
 plt.xlabel('x',fontsize=16)
