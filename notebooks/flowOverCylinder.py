@@ -83,7 +83,7 @@ def I(pi,pj):
                 +(pi.yc-(pj.ya+cos(pj.beta)*s))*sin(pi.beta))\
                 /(pi.xc-(pj.xa-sin(pj.beta)*s))**2\
                 + (pi.yc-(pj.ya+cos(pj.beta)*s)**2)
-        return integrate.quad(lambda s:func(s),0.,pj.length)[0]
+    return integrate.quad(lambda s:func(s),0.,pj.length)[0]
 
 A = np.empty((Np,Np),dtype=float)
 for i in range(Np):
@@ -109,7 +109,7 @@ def J(pi,pj):
                 +(pi.yc-(pj.ya+cos(pj.beta)*s))*cos(pi.beta))\
                 /((pi.xc-(pj.xa-sin(pj.beta)*s))**2\
                 + (pi.yc-(pj.ya+cos(pj.beta)*s))**2)
-        return integrate.quad(lambda s:func(s),0.,pj.length)[0]
+    return integrate.quad(lambda s:func(s),0.,pj.length)[0]
                 
 # populating panel parameters
 A = np.zeros((Np,Np),dtype=float)
@@ -125,7 +125,7 @@ for i in range(Np):
     
 # calculating pressure coefficent
 for i in range(Np):
-    panel[i].Cp = 1 - (panel[i].Vt/Cp)**2
+    panel[i].Cp = 1 - (panel[i].Vt/Uinf)**2
     
 # plotting pressure coefficient on the surface
 plt.figure(figsize=(10,6))
