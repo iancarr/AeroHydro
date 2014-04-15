@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # lesson 11 - Source-vortex panel method
 # started 8 Apr 2014
 # Ian Carr
@@ -223,7 +224,7 @@ def getTangentialVelocity(p,fs,gamma):
     for i in range(N):
         p[i].vt = vt[i]
         
-getTangentialVelocity(panel,freestream,gamma) # getting tangential velocity
+getTangentialVelocity(panel,freestream,gamma) # getting tangential velocityß
 
 # function to calculate pressure coeff at each control point
 def getPressureCoefficient(p,fs):
