@@ -11,7 +11,7 @@ from math import *
 
 # data from NACA is in resources file
 # reading shape data from naca file
-coords = np.loadtxt(fname='/Users/ian/GitHub/AeroHydro/resources/naca0012.dat')
+coords = np.loadtxt(fname='C:/Users/Ian/Documents/GitHub/AeroHydro/resources/naca0012.dat')
 xp,yp = coords[0:,0],coords[:,1]            # separating data into two arrays
 
 # plotting the geometry
@@ -81,7 +81,7 @@ def definePanels(N,xp,yp):
     
     return panel
     
-N = 20                      # number of panels
+N = 40                      # number of panels
 panel = definePanels(N,xp,yp) # discretization of the geometry into panels
 
 # plotting the geometry with the panels
@@ -114,7 +114,7 @@ class Freestream:
         
 # freestream parameters
 Uinf = 1.0                          # velocity mag
-alpha = 5.0                         # angle of attack
+alpha = 10.0                         # angle of attack
 freestream = Freestream(Uinf,alpha)
 
 # ------------- imposing flow tangency condition --------------
@@ -218,11 +218,11 @@ def getVelocityField(panel,freestream,gamma,X,Y):
             u[i,j] = freestream.Uinf*cos(freestream.alpha)\
                 + 0.5/pi*sum([p.sigma*I(X[i,j],Y[i,j],p,1,0) for p in panel])
             v[i,j] = freestream.Uinf*sin(freestream.alpha)\
-                + 0.5/pi*sum([p.sigma*I(X[i,j],Y[i,j],p,1,0) for p in panel])
+                + 0.5/pi*sum([p.sigma*I(X[i,j],Y[i,j],p,0,1) for p in panel])
     return u,v
     
 # defining the mesh
-Nx,Ny = 20,20
+Nx,Ny = 40,40
 valX,valY = 1.0,2.0
 xmin,xmax = min([p.xa for p in panel]),max([p.xa for p in panel])
 ymin,ymax = min([p.ya for p in panel]),max([p.ya for p in panel])
@@ -238,7 +238,7 @@ size=12
 plt.figure(figsize=(size,(yEnd-yStart)/(xEnd-xStart)*size))
 plt.xlabel('x',fontsize=16)
 plt.ylabel('y',fontsize=16)
-plt.streamplot(X,Y,u,v,density=1,linewidth=1,arrowsize=1,arrowstyle='->')
+plt.streamplot(X,Y,u,v,density=2,linewidth=1,arrowsize=1,arrowstyle='->')
 plt.fill([p.xa for p in panel],[p.ya for p in panel],'ko-',linewidth=2,zorder=2)
 plt.xlim(xStart,xEnd)
 plt.ylim(yStart,yEnd)
