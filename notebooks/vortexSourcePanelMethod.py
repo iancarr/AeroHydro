@@ -10,7 +10,7 @@ from math import *
 import matplotlib.pyplot as plt
 
 # reading geometry from file
-coords = np.loadtxt(fname='/Users/ian/GitHub/AeroHydro/resources/naca0012.dat')
+coords = np.loadtxt(fname='/users/ian/GitHub/AeroHydro/resources/naca0012.dat')
 xp,yp = coords[:,0],coords[:,1]
 
 # plotting the geometry
@@ -79,7 +79,7 @@ def definePanels(N,xp,yp):
         
     return panel
     
-N = 20                      # number of panels
+N = 20                      #  number of panels <----------------
 panel = definePanels(N,xp,yp)   # discretization of the geometry into panels
 
 # plotting the discretized geometry
@@ -111,7 +111,7 @@ class Freestream:
 
 # defining parameters for above class
 Uinf = 1.0                              # freestream area
-alpha = 1.0                             # angle of attack
+alpha = 5.0                             # angle of attack
 freestream = Freestream(Uinf,alpha)     # instant of object freestream
 
 # ---------- building a linear system -----------------
@@ -229,7 +229,9 @@ def getTangentialVelocity(p,fs,gamma):
     for i in range(N):
         p[i].vt = vt[i]
         
-getTangentialVelocity(panel,freestream,gamma) # getting tangential velocityß
+getTangentialVelocity(panel,freestream,gamma) # getting tangential velocity
+
+# --------- computing the pressure coeff -------------
 
 # function to calculate pressure coeff at each control point
 def getPressureCoefficient(p,fs):
@@ -270,3 +272,66 @@ print '--> sum of the source/sink strengths:',\
 # calculating the lift coefficient
 Cl = gamma*sum([p.length for p in panel])/(0.5*freestream.Uinf*(xmax-xmin))
 print ' --> Lift Coefficient: ',Cl 
+
+# -------------- computing velocity field -----------------------
+
+# defining a function to compute the velocity field given a mesh grid
+def getVelocityField(panel,freestream,gamma,X,Y):
+    Nx,Ny = X.shape
+    u,v = np.empty((Nx,Ny),dtype=float),np.empty((Nx,Ny),dtype=float)
+    for i in range(Nx):
+        for j in range(Ny):
+            u[i,j] = freestream.Uinf*cos(freestream.alpha)\
+                + 0.5/pi*sum([p.sigma*I(X[i,j],Y[i,j],p,1,0) for p in panel])\
+                - 0.5/pi*sum([gamma*I(X[i,j],Y[i,j],p,0,-1) for p in panel])
+            v[i,j] = freestream.Uinf*sin(freestream.alpha)\
+                + 0.5/pi*sum([p.sigma*I(X[i,j],Y[i,j],p,0,1) for p in panel])\
+                - 0.5/pi*sum([gamma*I(X[i,j],Y[i,j],p,1,0) for p in panel])
+    return u,v
+
+    
+# defining the mesh grid            
+Nx,Ny = 20,20
+valX,valY = 1.0,2.0
+
+xmin,xmax = min([p.xa for p in panel]),max([p.xa for p in panel])
+ymin,ymax = min([p.ya for p in panel]),max([p.ya for p in panel])
+
+xStart,xEnd = xmin-valX*(xmax-xmin),xmax+valX*(xmax-xmin)
+yStart,yEnd = ymin-valY*(ymax-ymin),ymax+valY*(ymax-ymin)
+
+X,Y = np.meshgrid(np.linspace(xStart,xEnd,Nx),np.linspace(yStart,yEnd,Ny))
+
+# getting the velocity field on the mesh grid
+u,v = getVelocityField(panel,freestream,gamma,X,Y)
+
+# plotting the velocity field
+size = 15
+plt.figure(figsize=(size,(yEnd-yStart)/(xEnd-xStart)*size))
+plt.xlabel('x',fontsize=16)
+plt.ylabel('y',fontsize=16)
+plt.fill([p.xa for p in panel],[p.ya for p in panel],'ko-',linewidth=2,zorder=2)
+plt.streamplot(X,Y,u,v,density=3,linewidth=1,arrowsize=1,arrowstyle='->')
+plt.xlim(xStart,xEnd)
+plt.ylim(yStart,yEnd)
+plt.title('Streamlines for NACA0012 airfoil with circulation, '+r'$\alpha=$'+str(alpha))
+
+# ------------- plotting the pressure coeff -------------
+
+# computing the pressure coeff field
+Cp = 1.0 - (u**2+v**2)/freestream.Uinf**2
+
+# plotting the pressure coeff field
+size = 15
+plt.figure(figsize=(1.1*size,(yEnd-yStart)/(xEnd-xStart)*size))
+plt.xlabel('x',fontsize=16)
+plt.ylabel('y',fontsize=16)
+contf = plt.contourf(X,Y,Cp,levels=np.linspace(-2.0,1.0,100),extend='both')
+cbar = plt.colorbar(contf)
+cbar.set_label('$C_p$',fontsize=16)
+cbar.set_ticks([-2.0,-1.0,0.0,1.0])
+plt.fill([p.xc for p in panel],[p.yc for p in panel],'ko-',linewidth=2,zorder=2)
+plt.xlim(xStart,xEnd)
+plt.ylim(yStart,yEnd)
+plt.title('Contour of pressure field')
+plt.show()
