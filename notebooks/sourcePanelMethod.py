@@ -218,7 +218,7 @@ def getVelocityField(panel,freestream,gamma,X,Y):
             u[i,j] = freestream.Uinf*cos(freestream.alpha)\
                 + 0.5/pi*sum([p.sigma*I(X[i,j],Y[i,j],p,1,0) for p in panel])
             v[i,j] = freestream.Uinf*sin(freestream.alpha)\
-                + 0.5/pi*sum([p.sigma*I(X[i,j],Y[i,j],p,1,0) for p in panel])
+                + 0.5/pi*sum([p.sigma*I(X[i,j],Y[i,j],p,0,1) for p in panel])
     return u,v
     
 # defining the mesh

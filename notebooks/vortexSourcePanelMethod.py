@@ -187,6 +187,8 @@ def buildMatrix(panel):
     A[0:N,0:N],A[0:N,N],A[N,:] = AS[:,:],BV[:],BK[:]
     return A
     
+# ----------- building linear system -------------    
+    
 # funciton to build the RHS of the linear system
 def buildRHS(p,fs):
     N = len(p)
@@ -204,6 +206,9 @@ var = np.linalg.solve(A,B)
 for i in range(len(panel)):
     panel[i].sigma = var[i]
 gamma = var[-1]
+
+
+# ----------- imposing tangential velocity ------------------
 
 # now getting the tangential velocity to impose the kutta condition
 def getTangentialVelocity(p,fs,gamma):
