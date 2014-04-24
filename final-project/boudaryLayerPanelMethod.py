@@ -29,7 +29,7 @@ class Panel:
         
         # location of the panel
         if (self.beta<=pi): self.loc = 'extrados'
-        else: self.loc = 'intrados'
+        else: self.loc = 'intrados' 
         
         self.sigma = 0          # source strength
         self.vt = 0             # tangential velocity
@@ -198,7 +198,6 @@ def getTangentialVelocity(p,fs,gamma):
 getTangentialVelocity(panel,freestream,gamma) # getting tangential velocity
 
 # plotting tangential velocity
-plt.figure()
 valX,valY = 0.1,0.2
 xmin,xmax = min([p.xa for p in panel]),max([p.xa for p in panel])
 vtmin,vtmax = min([p.vt for p in panel]),max([p.vt for p in panel])
@@ -209,37 +208,43 @@ plt.grid(True)
 plt.xlabel('x',fontsize=16)
 plt.ylabel('$V_t$',fontsize=16)
 plt.plot([p.xc for p in panel if p.loc=='extrados'],\
-         [-p.vt for p in panel if p.loc=='extrados'])
+         [-p.vt for p in panel if p.loc=='extrados'],'-bo')
 plt.plot([p.xc for p in panel if p.loc=='intrados'],\
-         [p.vt for p in panel if p.loc=='intrados'])
-
+         [p.vt for p in panel if p.loc=='intrados'],'-ro')
+plt.show()
  
 # ------------ BEGINNING OF NEW CODE ----------
 
-
+print testGrad
 # defining function to get velocity gradient
 N = len(panel)/2
-dvdxIntrados = np.zeros(N)
-dvdxExtrados = np.zeros_like(dvdxIntrados)
-for i in range(N-2): 
+dvdxInt = np.zeros(N)
+dvdxExt = np.zeros_like(dvdxInt)
+for i in range(N-2):
     if panel[i].loc=='intrados':
-        panel[i].vt = -panel[i].vt 
+        print i
         a = (panel[i+2].xc-panel[i].xc)/(panel[i+1].xc-panel[i].xc)
-        dvdxIntrados[i] = (1/(panel[i+2].xc-panel[i+1].xc))*(a*(panel[i+1].vt-panel[i].vt)\
+        dvdxInt[i] = (1/(panel[i+2].xc-panel[i+1].xc))*(a*(panel[i+1].vt-panel[i].vt)\
                 -((panel[i+2].vt-panel[i].vt)/a))
-                
-    if panel[i].loc=='extrados':
-        a = (panel[i+2].xc-panel[i].xc)/(panel[i+1].xc-panel[i].xc)
-        dvdxExtrados[i] = (1/(panel[i+2].xc-panel[i+1].xc))*(a*(panel[i+1].vt-panel[i].vt)\
-                -((panel[i+2].vt-panel[i].vt)/a))
-                
 
-plt.figure()
-plt.size(figsize=(10,6))
+for i in range(N-2):
+    if panel[i].loc=='extrados':
+        print i
+        a = (panel[i+2].xc-panel[i].xc)/(panel[i+1].xc-panel[i].xc)
+        dvdxExt[i] = (1/(panel[i+2].xc-panel[i+1].xc))*(a*(panel[i+1].vt-panel[i].vt)\
+                        -((panel[i+2].vt-panel[i].vt)/a))
+
+                
+# combining the two velocity gradient parts 
+dvdxInt = np.append(dvdxInt,np.zeros(2))
+
+# plotting
+plt.figure(figsize=(10,6))
 plt.grid(True)
-plt.xlabel('Extrados',fontsize=16)
+plt.xlabel('Airfoil Surface',fontsize=16)
 plt.ylabel('Velocity Gradient',fontsize=16)
-plt.plot([p.xc for p in panel if p.loc =='extrados'], dvdxExtrados)
+plt.plot([p.xc for p in panel if p.loc=='intrados'], dvdxInt,'-ro')
+plt.plot([p.xc for p in panel if p.loc =='extrados'], dvdxExt,'-bo')
 plt.show()
 
 # calculating Reynolds number based on freestream velocity
@@ -249,8 +254,6 @@ mu = 1.9*10**-5             # dynamic viscosity of air
 nu = mu/rho                 # kinematic viscosity
 L = max(xp)-min(xp)
 Re = rho*Uinf*L/mu
-
-# correcting tangential velocity on intrados
 
 # calculating integral in the momentum thickness equation
 intVe = np.zeros_like(dvdx,dtype=float) # integral in theta calculation
