@@ -10,23 +10,8 @@ from math import *
 import matplotlib.pyplot as plt
 
 # reading geometry from file
-coords = np.loadtxt(fname='C:/Users/icarr/Desktop/AeroHydro-master/AeroHydro-master/resources/naca0012.dat')
+coords = np.loadtxt(fname='C:/Users/Ian/Documents/GitHub/AeroHydro/resources/naca0012.dat')
 xp,yp = coords[:,0],coords[:,1]
-
-# plotting the geometry
-valX,valY = 0.1,0.2
-xmin,xmax = min(xp),max(xp)
-ymin,ymax = min(yp),max(yp)
-xStart,xEnd = xmin-valX*(xmax-xmin),xmax+valX*(xmax-xmin)
-yStart,yEnd = ymin-valY*(ymax-ymin),ymax+valY*(ymax-ymin)
-size = 10
-plt.figure(figsize=(size,(yEnd-yStart)/(xEnd-xStart)*size))
-plt.grid(True)
-plt.xlabel('x',fontsize=16)
-plt.ylabel('y',fontsize=16)
-plt.xlim(xStart,xEnd)
-plt.ylim(yStart,yEnd)
-plt.plot(xp,yp,'k-',linewidth=2);
 
 # --------- creating and applying panels ----------
 
@@ -81,25 +66,6 @@ def definePanels(N,xp,yp):
     
 N = 20                      #  number of panels <----------------
 panel = definePanels(N,xp,yp)   # discretization of the geometry into panels
-
-# plotting the discretized geometry
-valX,valY = 0.1,0.2
-xmin,xmax = min([p.xa for p in panel]),max([p.xa for p in panel])
-ymin,ymax = min([p.ya for p in panel]),max([p.ya for p in panel])
-xStart,xEnd = xmin-valX*(xmax-xmin),xmax+valY*(xmax-xmin)
-yStart,yEnd = ymin-valY*(ymax-ymin),ymax+valY*(ymax-ymin)
-size = 10
-plt.figure(figsize=(size,(yEnd-yStart)/(xEnd-xStart)*size))
-plt.grid(True)
-plt.xlabel('x',fontsize=16)
-plt.ylabel('y',fontsize=16)
-plt.xlim(xStart,xEnd)
-plt.ylim(yStart,yEnd)
-plt.plot(xp,yp,'k-',linewidth=2)
-plt.plot(np.append([p.xa for p in panel],panel[0].xa),\
-        np.append([p.ya for p in panel],panel[0].ya),\
-        linestyle='-',linewidth=1,\
-        marker='o',markersize=6,color='r')
 
 # ------------ defining freestream conditions -----------
 
@@ -232,7 +198,7 @@ def getTangentialVelocity(p,fs,gamma):
 getTangentialVelocity(panel,freestream,gamma) # getting tangential velocity
 
 # plotting tangential velocity
-
+plt.figure()
 valX,valY = 0.1,0.2
 xmin,xmax = min([p.xa for p in panel]),max([p.xa for p in panel])
 vtmin,vtmax = min([p.vt for p in panel]),max([p.vt for p in panel])
@@ -246,19 +212,35 @@ plt.plot([p.xc for p in panel if p.loc=='extrados'],\
          [-p.vt for p in panel if p.loc=='extrados'])
 plt.plot([p.xc for p in panel if p.loc=='intrados'],\
          [p.vt for p in panel if p.loc=='intrados'])
-plt.show()
-
 
  
-# ------------ BEGINNING OF NEW CODE -----------
+# ------------ BEGINNING OF NEW CODE ----------
+
 
 # defining function to get velocity gradient
-N = len(panel)
-dvdx = np.zeros(N)
-for i in range(N-2):
+N = len(panel)/2
+dvdxIntrados = np.zeros(N)
+dvdxExtrados = np.zeros_like(dvdxIntrados)
+for i in range(N-2): 
+    if panel[i].loc=='intrados':
+        panel[i].vt = -panel[i].vt 
         a = (panel[i+2].xc-panel[i].xc)/(panel[i+1].xc-panel[i].xc)
-        dvdx[i] = (1/(panel[i+2].xc-panel[i+1].xc))*(a*(panel[i+1].vt-panel[i].vt)\
-                -(panel[i+2].vt-panel[i].vt)/a)
+        dvdxIntrados[i] = (1/(panel[i+2].xc-panel[i+1].xc))*(a*(panel[i+1].vt-panel[i].vt)\
+                -((panel[i+2].vt-panel[i].vt)/a))
+                
+    if panel[i].loc=='extrados':
+        a = (panel[i+2].xc-panel[i].xc)/(panel[i+1].xc-panel[i].xc)
+        dvdxExtrados[i] = (1/(panel[i+2].xc-panel[i+1].xc))*(a*(panel[i+1].vt-panel[i].vt)\
+                -((panel[i+2].vt-panel[i].vt)/a))
+                
+
+plt.figure()
+plt.size(figsize=(10,6))
+plt.grid(True)
+plt.xlabel('Extrados',fontsize=16)
+plt.ylabel('Velocity Gradient',fontsize=16)
+plt.plot([p.xc for p in panel if p.loc =='extrados'], dvdxExtrados)
+plt.show()
 
 # calculating Reynolds number based on freestream velocity
 # the material properties are based on air
@@ -268,22 +250,30 @@ nu = mu/rho                 # kinematic viscosity
 L = max(xp)-min(xp)
 Re = rho*Uinf*L/mu
 
+# correcting tangential velocity on intrados
+
 # calculating integral in the momentum thickness equation
-intVe = np.zeros_like(dvdx)
-theta = np.zeros_like(intVe)
+intVe = np.zeros_like(dvdx,dtype=float) # integral in theta calculation
+theta = np.zeros_like(intVe,dtype=float)
+
+# intermediate calcualtion of integral
 for i in range(N-1):
+    if panel[i].loc=='intrados':
+        panel[i].vt = -panel[i].vt   
     intVe[i] = (panel[i].xc-panel[0].xc)*((panel[i].vt+panel[0].vt)/2)**5
-    
 
+# calcating momentum thickness
 for i in range(N-1):
-    theta[i] = np.sqrt((0.45/panel[i].vt)*intVe[i])
-
-
-
+    if panel[i].loc=='intrados':
+        panel[i].vt = -panel[i].vt
+    theta[i] = np.sqrt((0.45/panel[i].vt**6)*intVe[i])
     
+# assigning value of theta at stagnation
+theta[0] = np.sqrt((0.075*nu)/dvdx[0])
 
+# calculating the pressure gradient parameter
+lam = np.empty_like(theta)
+for i in range(N):
+    lam[i] = (rho*theta[i]**2/mu)*(dvdx[i]) 
     
-
-    
-
-
+# calculating shape factor H from lambda (lam)
