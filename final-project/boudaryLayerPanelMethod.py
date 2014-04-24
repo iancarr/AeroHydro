@@ -77,7 +77,7 @@ class Freestream:
 
 # defining parameters for above class
 Uinf = 1.0                              # freestream velocity
-alpha = 0.0                             # angle of attack
+alpha = 2.0                             # angle of attack
 freestream = Freestream(Uinf,alpha)     # instant of object freestream
 
 # ---------- building a linear system -----------------
@@ -215,28 +215,9 @@ plt.show()
  
 # ------------ BEGINNING OF NEW CODE ----------
 
-print testGrad
 # defining function to get velocity gradient
-N = len(panel)/2
-dvdxInt = np.zeros(N)
-dvdxExt = np.zeros_like(dvdxInt)
-for i in range(N-2):
-    if panel[i].loc=='intrados':
-        print i
-        a = (panel[i+2].xc-panel[i].xc)/(panel[i+1].xc-panel[i].xc)
-        dvdxInt[i] = (1/(panel[i+2].xc-panel[i+1].xc))*(a*(panel[i+1].vt-panel[i].vt)\
-                -((panel[i+2].vt-panel[i].vt)/a))
-
-for i in range(N-2):
-    if panel[i].loc=='extrados':
-        print i
-        a = (panel[i+2].xc-panel[i].xc)/(panel[i+1].xc-panel[i].xc)
-        dvdxExt[i] = (1/(panel[i+2].xc-panel[i+1].xc))*(a*(panel[i+1].vt-panel[i].vt)\
-                        -((panel[i+2].vt-panel[i].vt)/a))
-
-                
-# combining the two velocity gradient parts 
-dvdxInt = np.append(dvdxInt,np.zeros(2))
+dvdxInt = np.gradient([p.vt for p in panel if p.loc=='intrados'])
+dvdxExt = np.gradient([p.vt for p in panel if p.loc=='extrados'])
 
 # plotting
 plt.figure(figsize=(10,6))
