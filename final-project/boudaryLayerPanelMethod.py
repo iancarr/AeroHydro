@@ -76,7 +76,7 @@ class Freestream:
         self.alpha = alpha*pi/180       # angle of attack
 
 # defining parameters for above class
-Uinf = 1.0                              # freestream velocity
+Uinf = 100.0                              # freestream velocity
 alpha = 2.0                             # angle of attack
 freestream = Freestream(Uinf,alpha)     # instant of object freestream
 
@@ -206,7 +206,7 @@ yStart,yEnd = vtmin-valY*(vtmax-vtmin),xmax+valY*(vtmax-vtmin)
 plt.figure(figsize=(10,6))
 plt.grid(True)
 plt.xlabel('x',fontsize=16)
-plt.ylabel('$V_t$',fontsize=16)
+plt.ylabel('Tangential Velocity',fontsize=16)
 plt.plot([p.xc for p in panel if p.loc=='extrados'],\
          [-p.vt for p in panel if p.loc=='extrados'],'-bo')
 plt.plot([p.xc for p in panel if p.loc=='intrados'],\
@@ -215,9 +215,10 @@ plt.show()
  
 # ------------ BEGINNING OF NEW CODE ----------
 
-# defining function to get velocity gradient
-dvdxInt = np.gradient([p.vt for p in panel if p.loc=='intrados'])
+# calculating velocity gradient
+dvdxInt = np.gradient([-p.vt for p in panel if p.loc=='intrados'])
 dvdxExt = np.gradient([p.vt for p in panel if p.loc=='extrados'])
+dvdx = np.gradient([p.vt for p in panel])
 
 # plotting
 plt.figure(figsize=(10,6))
@@ -228,10 +229,17 @@ plt.plot([p.xc for p in panel if p.loc=='intrados'], dvdxInt,'-ro')
 plt.plot([p.xc for p in panel if p.loc =='extrados'], dvdxExt,'-bo')
 plt.show()
 
+plt.figure(figsize=(10,6))
+plt.grid(True)
+plt.xlabel('Airfoil Surface',fontsize=16)
+plt.ylabel('Velocity Gradient',fontsize=16)
+plt.plot([p.xc for p in panel], dvdx,'-bo')
+plt.show()
+
 # calculating Reynolds number based on freestream velocity
 # the material properties are based on air
 rho = 1.2                   # density of air kg/m**3
-mu = 1.9*10**-5             # dynamic viscosity of air
+mu = 1.9*10**-5             # dynamic viscosity of air kg/ms
 nu = mu/rho                 # kinematic viscosity
 L = max(xp)-min(xp)
 Re = rho*Uinf*L/mu
@@ -241,23 +249,27 @@ intVe = np.zeros_like(dvdx,dtype=float) # integral in theta calculation
 theta = np.zeros_like(intVe,dtype=float)
 
 # intermediate calcualtion of integral
-for i in range(N-1):
-    if panel[i].loc=='intrados':
-        panel[i].vt = -panel[i].vt   
-    intVe[i] = (panel[i].xc-panel[0].xc)*((panel[i].vt+panel[0].vt)/2)**5
+for i in range(N): 
+    intVe[i] = integrate.trapz([p.vt for p in panel],[panel[0].xc,panel[i].xc])
 
 # calcating momentum thickness
-for i in range(N-1):
-    if panel[i].loc=='intrados':
-        panel[i].vt = -panel[i].vt
+for i in range(N):
     theta[i] = np.sqrt((0.45/panel[i].vt**6)*intVe[i])
+    if theta[i] == 0: 
+        theta[i]=np.sqrt((0.075*mu)/(rho*dvdx[(len(dvdx)/2)]))
+        
     
-# assigning value of theta at stagnation
-theta[0] = np.sqrt((0.075*nu)/dvdx[0])
-
 # calculating the pressure gradient parameter
 lam = np.empty_like(theta)
 for i in range(N):
     lam[i] = (rho*theta[i]**2/mu)*(dvdx[i]) 
     
+#theta[0] = np.sqrt((0.075*nu)/dvdx[0])
+    
 # calculating shape factor H from lambda (lam)
+H = np.zeros_like(lam)
+for i in range(N):
+    if lam[i]>0 and lam[i]<0.1:
+        H[i] = 2.61-3.75*lam[i]+5.24*lam[i]
+    if lam[i]>-0.1 and lam[i]<0:
+        H[i] = 2.008+(0.0731/(lam[i]+0.14))
