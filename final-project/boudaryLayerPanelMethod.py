@@ -13,21 +13,6 @@ import matplotlib.pyplot as plt
 coords = np.loadtxt(fname='C:/Users/Ian/Documents/GitHub/AeroHydro/resources/naca0012.dat')
 xp,yp = coords[:,0],coords[:,1]
 
-# plotting the geometry
-valX,valY = 0.1,0.2
-xmin,xmax = min(xp),max(xp)
-ymin,ymax = min(yp),max(yp)
-xStart,xEnd = xmin-valX*(xmax-xmin),xmax+valX*(xmax-xmin)
-yStart,yEnd = ymin-valY*(ymax-ymin),ymax+valY*(ymax-ymin)
-size = 10
-plt.figure(figsize=(size,(yEnd-yStart)/(xEnd-xStart)*size))
-plt.grid(True)
-plt.xlabel('x',fontsize=16)
-plt.ylabel('y',fontsize=16)
-plt.xlim(xStart,xEnd)
-plt.ylim(yStart,yEnd)
-plt.plot(xp,yp,'k-',linewidth=2);
-
 # --------- creating and applying panels ----------
 
 # defining class Panel with info on one panel
@@ -44,7 +29,7 @@ class Panel:
         
         # location of the panel
         if (self.beta<=pi): self.loc = 'extrados'
-        else: self.loc = 'intrados'
+        else: self.loc = 'intrados' 
         
         self.sigma = 0          # source strength
         self.vt = 0             # tangential velocity
@@ -79,31 +64,8 @@ def definePanels(N,xp,yp):
         
     return panel
     
-<<<<<<< HEAD
-N = 30                      #  number of panels <----------------
-=======
 N = 20                      #  number of panels <----------------
->>>>>>> 6baab3ef5b51c691c8b7c44acdd098bfea2a5d71
 panel = definePanels(N,xp,yp)   # discretization of the geometry into panels
-
-# plotting the discretized geometry
-valX,valY = 0.1,0.2
-xmin,xmax = min([p.xa for p in panel]),max([p.xa for p in panel])
-ymin,ymax = min([p.ya for p in panel]),max([p.ya for p in panel])
-xStart,xEnd = xmin-valX*(xmax-xmin),xmax+valY*(xmax-xmin)
-yStart,yEnd = ymin-valY*(ymax-ymin),ymax+valY*(ymax-ymin)
-size = 10
-plt.figure(figsize=(size,(yEnd-yStart)/(xEnd-xStart)*size))
-plt.grid(True)
-plt.xlabel('x',fontsize=16)
-plt.ylabel('y',fontsize=16)
-plt.xlim(xStart,xEnd)
-plt.ylim(yStart,yEnd)
-plt.plot(xp,yp,'k-',linewidth=2)
-plt.plot(np.append([p.xa for p in panel],panel[0].xa),\
-        np.append([p.ya for p in panel],panel[0].ya),\
-        linestyle='-',linewidth=1,\
-        marker='o',markersize=6,color='r')
 
 # ------------ defining freestream conditions -----------
 
@@ -114,12 +76,8 @@ class Freestream:
         self.alpha = alpha*pi/180       # angle of attack
 
 # defining parameters for above class
-<<<<<<< HEAD
-Uinf = 1.0                              # freestream area
-=======
-Uinf = 100000.0                              # freestream area
->>>>>>> 6baab3ef5b51c691c8b7c44acdd098bfea2a5d71
-alpha = 5.0                             # angle of attack
+Uinf = 100.0                              # freestream velocity
+alpha = 2.0                             # angle of attack
 freestream = Freestream(Uinf,alpha)     # instant of object freestream
 
 # ---------- building a linear system -----------------
@@ -239,111 +197,79 @@ def getTangentialVelocity(p,fs,gamma):
         
 getTangentialVelocity(panel,freestream,gamma) # getting tangential velocity
 
-# --------- computing the pressure coeff -------------
-
-# function to calculate pressure coeff at each control point
-def getPressureCoefficient(p,fs):
-    for i in range(len(p)):
-        p[i].Cp = 1-(p[i].vt/fs.Uinf)**2
-        
-getPressureCoefficient(panel,freestream) # using above function
-
-# plotting the coefficient of pressure
+# plotting tangential velocity
 valX,valY = 0.1,0.2
 xmin,xmax = min([p.xa for p in panel]),max([p.xa for p in panel])
-Cpmin,Cpmax = min([p.Cp for p in panel]),max([p.Cp for p in panel])
+vtmin,vtmax = min([p.vt for p in panel]),max([p.vt for p in panel])
 xStart,xEnd = xmin-valX*(xmax-xmin),xmax+valX*(xmax-xmin)
-yStart,yEnd = Cpmin-valY*(Cpmax-Cpmin),xmax+valY*(Cpmax-Cpmin)
+yStart,yEnd = vtmin-valY*(vtmax-vtmin),xmax+valY*(vtmax-vtmin)
 plt.figure(figsize=(10,6))
 plt.grid(True)
 plt.xlabel('x',fontsize=16)
-plt.ylabel('$C_p$',fontsize=16)
+plt.ylabel('Tangential Velocity',fontsize=16)
 plt.plot([p.xc for p in panel if p.loc=='extrados'],\
-        [p.Cp for p in panel if p.loc=='extrados'],\
-        'ro-',linewidth=2)
+         [-p.vt for p in panel if p.loc=='extrados'],'-bo')
 plt.plot([p.xc for p in panel if p.loc=='intrados'],\
-        [p.Cp for p in panel if p.loc=='intrados'],\
-        'bo-',linewidth=2)
-plt.xlim(xStart,xEnd)
-plt.ylim(yStart,yEnd)
-plt.gca().invert_yaxis()
-plt.title('Number of panels: %d'%len(panel))
-plt.legend(['extrados','intrados'],'best',prop={'size':14})
+         [p.vt for p in panel if p.loc=='intrados'],'-ro')
 plt.show()
-       
-# ---------- checking the accuracy and calculaing lift -----------
+ 
+# ------------ BEGINNING OF NEW CODE ----------
 
-# summing all the source/sink strengths
-print '--> sum of the source/sink strengths:',\
-            sum([p.sigma*p.length for p in panel])
-            
-# calculating the lift coefficient
-Cl = gamma*sum([p.length for p in panel])/(0.5*freestream.Uinf*(xmax-xmin))
-print ' --> Lift Coefficient: ',Cl 
+# calculating velocity gradient
+dvdxInt = np.gradient([-p.vt for p in panel if p.loc=='intrados'])
+dvdxExt = np.gradient([p.vt for p in panel if p.loc=='extrados'])
+dvdx = np.gradient([p.vt for p in panel])
 
-# -------------- computing velocity field -----------------------
+# plotting
+plt.figure(figsize=(10,6))
+plt.grid(True)
+plt.xlabel('Airfoil Surface',fontsize=16)
+plt.ylabel('Velocity Gradient',fontsize=16)
+plt.plot([p.xc for p in panel if p.loc=='intrados'], dvdxInt,'-ro')
+plt.plot([p.xc for p in panel if p.loc =='extrados'], dvdxExt,'-bo')
+plt.show()
 
-# defining a function to compute the velocity field given a mesh grid
-def getVelocityField(panel,freestream,gamma,X,Y):
-    Nx,Ny = X.shape
-    u,v = np.empty((Nx,Ny),dtype=float),np.empty((Nx,Ny),dtype=float)
-    for i in range(Nx):
-        for j in range(Ny):
-            u[i,j] = freestream.Uinf*cos(freestream.alpha)\
-                + 0.5/pi*sum([p.sigma*I(X[i,j],Y[i,j],p,1,0) for p in panel])\
-                - 0.5/pi*sum([gamma*I(X[i,j],Y[i,j],p,0,-1) for p in panel])
-            v[i,j] = freestream.Uinf*sin(freestream.alpha)\
-                + 0.5/pi*sum([p.sigma*I(X[i,j],Y[i,j],p,0,1) for p in panel])\
-                - 0.5/pi*sum([gamma*I(X[i,j],Y[i,j],p,1,0) for p in panel])
-    return u,v
+plt.figure(figsize=(10,6))
+plt.grid(True)
+plt.xlabel('Airfoil Surface',fontsize=16)
+plt.ylabel('Velocity Gradient',fontsize=16)
+plt.plot([p.xc for p in panel], dvdx,'-bo')
+plt.show()
 
+# calculating Reynolds number based on freestream velocity
+# the material properties are based on air
+rho = 1.2                   # density of air kg/m**3
+mu = 1.9*10**-5             # dynamic viscosity of air kg/ms
+nu = mu/rho                 # kinematic viscosity
+L = max(xp)-min(xp)
+Re = rho*Uinf*L/mu
+
+# calculating integral in the momentum thickness equation
+intVe = np.zeros_like(dvdx,dtype=float) # integral in theta calculation
+theta = np.zeros_like(intVe,dtype=float)
+
+# intermediate calcualtion of integral
+for i in range(N): 
+    intVe[i] = integrate.trapz([p.vt for p in panel],[panel[0].xc,panel[i].xc])
+
+# calcating momentum thickness
+for i in range(N):
+    theta[i] = np.sqrt((0.45/panel[i].vt**6)*intVe[i])
+    if theta[i] == 0: 
+        theta[i]=np.sqrt((0.075*mu)/(rho*dvdx[(len(dvdx)/2)]))
+        
     
-# defining the mesh grid            
-<<<<<<< HEAD
-Nx,Ny = 100,100
-=======
-Nx,Ny = 20,20
->>>>>>> 6baab3ef5b51c691c8b7c44acdd098bfea2a5d71
-valX,valY = 1.0,2.0
-
-xmin,xmax = min([p.xa for p in panel]),max([p.xa for p in panel])
-ymin,ymax = min([p.ya for p in panel]),max([p.ya for p in panel])
-
-xStart,xEnd = xmin-valX*(xmax-xmin),xmax+valX*(xmax-xmin)
-yStart,yEnd = ymin-valY*(ymax-ymin),ymax+valY*(ymax-ymin)
-
-X,Y = np.meshgrid(np.linspace(xStart,xEnd,Nx),np.linspace(yStart,yEnd,Ny))
-
-# getting the velocity field on the mesh grid
-u,v = getVelocityField(panel,freestream,gamma,X,Y)
-
-# plotting the velocity field
-size = 15
-plt.figure(figsize=(size,(yEnd-yStart)/(xEnd-xStart)*size))
-plt.xlabel('x',fontsize=16)
-plt.ylabel('y',fontsize=16)
-plt.fill([p.xa for p in panel],[p.ya for p in panel],'ko-',linewidth=2,zorder=2)
-plt.streamplot(X,Y,u,v,density=3,linewidth=1,arrowsize=1,arrowstyle='->')
-plt.xlim(xStart,xEnd)
-plt.ylim(yStart,yEnd)
-plt.title('Streamlines for NACA0012 airfoil with circulation, '+r'$\alpha=$'+str(alpha))
-
-# ------------- plotting the pressure coeff -------------
-
-# computing the pressure coeff field
-Cp = 1.0 - (u**2+v**2)/freestream.Uinf**2
-
-# plotting the pressure coeff field
-size = 15
-plt.figure(figsize=(1.1*size,(yEnd-yStart)/(xEnd-xStart)*size))
-plt.xlabel('x',fontsize=16)
-plt.ylabel('y',fontsize=16)
-contf = plt.contourf(X,Y,Cp,levels=np.linspace(-2.0,1.0,100),extend='both')
-cbar = plt.colorbar(contf)
-cbar.set_label('$C_p$',fontsize=16)
-cbar.set_ticks([-2.0,-1.0,0.0,1.0])
-plt.fill([p.xc for p in panel],[p.yc for p in panel],'ko-',linewidth=2,zorder=2)
-plt.xlim(xStart,xEnd)
-plt.ylim(yStart,yEnd)
-plt.title('Contour of pressure field')
-plt.show()
+# calculating the pressure gradient parameter
+lam = np.empty_like(theta)
+for i in range(N):
+    lam[i] = (rho*theta[i]**2/mu)*(dvdx[i]) 
+    
+#theta[0] = np.sqrt((0.075*nu)/dvdx[0])
+    
+# calculating shape factor H from lambda (lam)
+H = np.zeros_like(lam)
+for i in range(N):
+    if lam[i]>0 and lam[i]<0.1:
+        H[i] = 2.61-3.75*lam[i]+5.24*lam[i]
+    if lam[i]>-0.1 and lam[i]<0:
+        H[i] = 2.008+(0.0731/(lam[i]+0.14))
