@@ -10,7 +10,7 @@ from math import *
 import matplotlib.pyplot as plt
 
 # reading geometry from file
-coords = np.loadtxt(fname='C:/Users/Ian/Documents/GitHub/AeroHydro/resources/naca0012.dat')
+coords = np.loadtxt(fname='/users/ian/GitHub/AeroHydro/resources/naca0012.dat')
 xp,yp = coords[:,0],coords[:,1]
 
 # --------- creating and applying panels ----------
@@ -76,7 +76,7 @@ class Freestream:
         self.alpha = alpha*pi/180       # angle of attack
 
 # defining parameters for above class
-Uinf = 100.0                              # freestream velocity
+Uinf = 1000.0                              # freestream velocity
 alpha = 2.0                             # angle of attack
 freestream = Freestream(Uinf,alpha)     # instant of object freestream
 
@@ -255,8 +255,8 @@ for i in range(N):
 # calcating momentum thickness
 for i in range(N):
     theta[i] = np.sqrt((0.45/panel[i].vt**6)*intVe[i])
-    if theta[i] == 0: 
-        theta[i]=np.sqrt((0.075*mu)/(rho*dvdx[(len(dvdx)/2)]))
+#    if theta[i] == 0: 
+ #       theta[i]=np.sqrt((0.075*mu)/(rho*dvdx[(len(dvdx)/2)]))
         
     
 # calculating the pressure gradient parameter
@@ -276,4 +276,10 @@ for i in range(N):
         
 # calculating displacement thickness
 disp = H*theta
+plt.figure(figsize=(10,6))
+plt.title('Displacement Thickness')
+plt.plot([p.xc for p in panel],disp)
+plt.xlabel('x',fontsize=16)
+plt.ylabel('Disp',fontsize=16)
+plt.show()
 
