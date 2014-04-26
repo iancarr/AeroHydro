@@ -76,8 +76,8 @@ class Freestream:
         self.alpha = alpha*pi/180       # angle of attack
 
 # defining parameters for above class
-Uinf = 1000.0                              # freestream velocity
-alpha = 2.0                             # angle of attack
+Uinf = 100.0                              # freestream velocity
+alpha = 0.0                             # angle of attack
 freestream = Freestream(Uinf,alpha)     # instant of object freestream
 
 # ---------- building a linear system -----------------
@@ -215,10 +215,24 @@ plt.show()
  
 # ------------ BEGINNING OF NEW CODE ----------
 
-# calculating velocity gradient
+# creating the running surface coordinate system
+for i in range(N):
+    print panel[i].xc
+
+sExt = np.zeros(N/2)
+for i in range(N/2):
+    if i==0:
+        sExt[i]=0
+    if i>0:
+        sExt[i] = sExt[i-1]+0.5*panel[i].length + 0.5*panel[i-1].length
+
+# calculatig velocity gradient
 dvdxInt = np.gradient([-p.vt for p in panel if p.loc=='intrados'])
 dvdxExt = np.gradient([p.vt for p in panel if p.loc=='extrados'])
 dvdx = np.gradient([p.vt for p in panel])
+
+# flipping the velocity gradient arrays
+dvdxExt = dvdxExt[::-1]
 
 # plotting
 plt.figure(figsize=(10,6))
@@ -233,7 +247,7 @@ plt.figure(figsize=(10,6))
 plt.grid(True)
 plt.xlabel('Airfoil Surface',fontsize=16)
 plt.ylabel('Velocity Gradient',fontsize=16)
-plt.plot([p.xc for p in panel], dvdx,'-bo')
+plt.plot(sExt, dvdxExt,'-bo')
 plt.show()
 
 # calculating Reynolds number based on freestream velocity
@@ -250,13 +264,13 @@ theta = np.zeros_like(intVe,dtype=float)
 
 # intermediate calcualtion of integral
 for i in range(N): 
-    intVe[i] = integrate.trapz([p.vt for p in panel],[panel[0].xc,panel[i].xc])
+    intVe[i] = integrate.trapz([p.vt**5 for p in panel],[panel[0].xc,panel[i].xc])
 
 # calcating momentum thickness
 for i in range(N):
     theta[i] = np.sqrt((0.45/panel[i].vt**6)*intVe[i])
-#    if theta[i] == 0: 
- #       theta[i]=np.sqrt((0.075*mu)/(rho*dvdx[(len(dvdx)/2)]))
+    if theta[i] == 0: 
+        theta[i]=np.sqrt((0.075*mu)/(rho*dvdx[(len(dvdx)/2)]))
         
     
 # calculating the pressure gradient parameter
@@ -264,13 +278,11 @@ lam = np.empty_like(theta)
 for i in range(N):
     lam[i] = (rho*theta[i]**2/mu)*(dvdx[i]) 
     
-#theta[0] = np.sqrt((0.075*nu)/dvdx[0])
-    
 # calculating shape factor H from lambda (lam)
 H = np.zeros_like(lam)
 for i in range(N):
     if lam[i]>0 and lam[i]<0.1:
-        H[i] = 2.61-3.75*lam[i]+5.24*lam[i]
+        H[i] = 2.61-3.75*lam[i]+5.24*lam[i]**2
     if lam[i]>-0.1 and lam[i]<0:
         H[i] = 2.008+(0.0731/(lam[i]+0.14))
         
