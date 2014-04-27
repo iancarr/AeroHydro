@@ -64,7 +64,7 @@ def definePanels(N,xp,yp):
         
     return panel
     
-N = 30                      #  number of panels <----------------
+N = 100                      #  number of panels <----------------
 panel = definePanels(N,xp,yp)   # discretization of the geometry into panels
 
 # ------------ defining freestream conditions -----------
@@ -268,7 +268,6 @@ theta = np.zeros_like(intVe)
 for i in range(N2):
     A = (vtExt[i]**5)*sExt[i]
     intVe[i] = sum(intVe)+A
-    print intVe
 
 # calcating momentum thickness
 for i in range(N2):
@@ -346,3 +345,18 @@ plt.plot(xp,yp,'k-',linewidth=2)
 plt.plot(xTheta,yTheta,linewidth=2)
 
 
+# -------- Michaels Tranision Criterion -----------
+
+# the criterion is entirely based on the reynolds numbers computed below
+ReTheta = np.zeros_like(vtExt)
+ReS = np.zeros_like(ReTheta)
+mc = np.zeros_like(ReS)                         # transition criterion   
+
+for i in range(N2):
+    ReTheta[i] = (rho*vtExt[i]*theta[i])/mu     # Re based on momentum thickness
+    ReS[i] = (rho*vtExt[i]*sExt[i])/mu          # Re based on position
+    mc[i] = 1.174*(1+(22400/ReS[i]))*ReS[i]**0.46 # transition criterion
+    if mc[i]<ReTheta[i]:
+        print 'Transition point at: ', sExt[i]
+        break
+        
