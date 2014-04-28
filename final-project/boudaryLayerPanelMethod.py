@@ -10,7 +10,7 @@ from math import *
 import matplotlib.pyplot as plt
 
 # reading geometry from file
-coords = np.loadtxt(fname='/users/ian/GitHub/AeroHydro/resources/naca0012.dat')
+coords = np.loadtxt(fname='C:/Users/Ian/Documents/GitHub/AeroHydro/resources/naca0012.dat')
 xp,yp = coords[:,0],coords[:,1]
 
 # --------- creating and applying panels ----------
@@ -64,7 +64,7 @@ def definePanels(N,xp,yp):
         
     return panel
     
-N = 100                      #  number of panels <----------------
+N = 30                      #  number of panels <----------------
 panel = definePanels(N,xp,yp)   # discretization of the geometry into panels
 
 # ------------ defining freestream conditions -----------
@@ -76,7 +76,7 @@ class Freestream:
         self.alpha = alpha*pi/180       # angle of attack
 
 # defining parameters for above class
-Uinf = 100.0                              # freestream velocity
+Uinf = 10.0                              # freestream velocity
 alpha = 0.0                             # angle of attack
 freestream = Freestream(Uinf,alpha)     # instant of object freestream
 
@@ -300,7 +300,6 @@ ycInt = [p.yc for p in panel if p.loc=='intrados']
 betaExt = [p.beta for p in panel if p.loc=='extrados']
 betaInt = [p.beta for p in panel if p.loc=='intrados']
 
-
 # adding the height of the displacement thickness to the airfoil
 for i in range(N2):
     xDisp = disp[i]*np.cos(betaExt[i])+xcExt
@@ -316,7 +315,7 @@ xmin,xmax = min([p.xa for p in panel]),max([p.xa for p in panel])
 ymin,ymax = min([p.ya for p in panel]),max([p.ya for p in panel])
 xStart,xEnd = xmin-valX*(xmax-xmin),xmax+valY*(xmax-xmin)
 yStart,yEnd = ymin-valY*(ymax-ymin),ymax+valY*(ymax-ymin)
-size = 10
+size = 16
 plt.figure(figsize=(size,(yEnd-yStart)/(xEnd-xStart)*size))
 plt.grid(True)
 plt.xlabel('x',fontsize=16)
@@ -333,7 +332,7 @@ xmin,xmax = min([p.xa for p in panel]),max([p.xa for p in panel])
 ymin,ymax = min([p.ya for p in panel]),max([p.ya for p in panel])
 xStart,xEnd = xmin-valX*(xmax-xmin),xmax+valY*(xmax-xmin)
 yStart,yEnd = ymin-valY*(ymax-ymin),ymax+valY*(ymax-ymin)
-size = 10
+size = 16
 plt.figure(figsize=(size,(yEnd-yStart)/(xEnd-xStart)*size))
 plt.grid(True)
 plt.xlabel('x',fontsize=16)
@@ -360,3 +359,5 @@ for i in range(N2):
         print 'Transition point at: ', sExt[i]
         break
         
+# ------------- Head's Method --------------
+
