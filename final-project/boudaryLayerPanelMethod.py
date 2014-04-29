@@ -7,6 +7,7 @@
 import numpy as np
 from scipy import integrate
 from math import *
+from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 
 # reading geometry from file
@@ -64,7 +65,7 @@ def definePanels(N,xp,yp):
         
     return panel
     
-N = 30                      #  number of panels <----------------
+N = 50                      #  number of panels <----------------
 panel = definePanels(N,xp,yp)   # discretization of the geometry into panels
 
 # ------------ defining freestream conditions -----------
@@ -196,119 +197,113 @@ def getTangentialVelocity(p,fs,gamma):
         p[i].vt = vt[i]
         
 getTangentialVelocity(panel,freestream,gamma) # getting tangential velocity
-
-# plotting tangential velocity
-valX,valY = 0.1,0.2
-xmin,xmax = min([p.xa for p in panel]),max([p.xa for p in panel])
-vtmin,vtmax = min([p.vt for p in panel]),max([p.vt for p in panel])
-xStart,xEnd = xmin-valX*(xmax-xmin),xmax+valX*(xmax-xmin)
-yStart,yEnd = vtmin-valY*(vtmax-vtmin),xmax+valY*(vtmax-vtmin)
-plt.figure(figsize=(10,6))
-plt.grid(True)
-plt.xlabel('x',fontsize=16)
-plt.ylabel('Tangential Velocity',fontsize=16)
-plt.plot([p.xc for p in panel if p.loc=='extrados'],\
-         [-p.vt for p in panel if p.loc=='extrados'],'-bo')
-plt.plot([p.xc for p in panel if p.loc=='intrados'],\
-         [p.vt for p in panel if p.loc=='intrados'],'-ro')
-plt.show()
  
 # ------------ BEGINNING OF NEW CODE ----------
 
-# as a first round it is necessary to split up the code into two parts
-# one for the extrados (top) and one for in the intrados (bottom)
+# find the control point on the geometry just after the stagnation point
+I = 0
+for i in range(len(panel)):
+    if (panel[i].vt/panel[0].vt<0.):
+        I = i
+        break
 
-N2 = N/2 # looping variable for one side of the airfoil
+# control point before stagnation point on upper side
+V1,x1,y1 = panel[I-1].vt,panel[I-1].xc,panel[I-1].yc
+# control point before stagnation point on lower side
+V2,x2,y2 = panel[I].vt,panel[I].xc,panel[I].yc
 
-# creating the running surface coordinate system
-sExt = np.zeros(N2)
-for i in range(N2):
-    if i==0:
-        sExt[i]=0
-    if i>0:
-        sExt[i] = sExt[i-1]+0.5*panel[i].length + 0.5*panel[i-1].length
+# interpolation to find the location of the stagnation point
+xStagn,yStagn = x1-V1*(x2-x1)/(V2-V1) , y1-V1*(y2-y1)/(V2-V1)
 
-# creating separate velocity arrays
-vtExt = [-p.vt for p in panel if p.loc=='extrados']
-vtInt = [p.vt for p in panel if p.loc=='intrados']
+sUpper,sLower = np.zeros(I+1),np.zeros(N-I+1)
+VeUpper,VeLower = np.zeros(I+1),np.zeros(N-I+1)
 
-# flipping velocity arrays
-vtExt = vtExt[::-1]
+sUpper[1] = sqrt((xStagn-panel[I-1].xc)**2+(yStagn-panel[I-1].yc)**2)
+VeUpper[1] = -panel[I-1].vt
+sLower[1] = sqrt((xStagn-panel[I].xc)**2+(yStagn-panel[I].yc)**2)
+VeLower[1] = panel[I].vt
 
-# calculatig velocity gradient
-dvdxInt = np.gradient(vtExt)
-dvdxExt = np.gradient(vtInt)
-dvdx = np.gradient([p.vt for p in panel])
-
-# flipping the velocity gradient arrays
-#dvdxExt = dvdxExt[::-1]
-
-# plotting
-plt.figure(figsize=(10,6))
-plt.grid(True)
-plt.xlabel('Airfoil Surface',fontsize=16)
-plt.ylabel('Velocity Gradient',fontsize=16)
-plt.plot(sExt, dvdxExt,'-ro')
-plt.show()
-
-# calculating Reynolds number based on freestream velocity
-# the material properties are based on air
+for i in range(1,I):
+    sUpper[i+1] = sUpper[i] + panel[I-1-i].length/2
+    VeUpper[i+1] = -panel[I-1-i].vt
+for i in range(1,N-I):
+    sLower[i+1] = sLower[i] + panel[I+i].length/2
+    VeLower[i+1] = panel[I+i].vt
+    
 rho = 1.2                   # density of air kg/m**3
 mu = 1.9*10**-5             # dynamic viscosity of air kg/ms
 nu = mu/rho                 # kinematic viscosity
-L = max(xp)-min(xp)
-Re = rho*Uinf*L/mu
-print Re
-
-# calculating integral in the momentum thickness equation
-intVe = np.zeros_like(sExt)# integral in theta calculation
-theta = np.zeros_like(intVe)
-
-# intermediate calcualtion of integral
-for i in range(N2):
-    A = (vtExt[i]**5)*sExt[i]
-    intVe[i] = sum(intVe)+A
-
-# calcating momentum thickness
-for i in range(N2):
-    theta[i] = np.sqrt(((0.45*nu)/vtExt[i]**6)*intVe[i])
-        
-theta[0]=np.sqrt((0.075*nu)/(dvdxExt[0]))
     
-# calculating the pressure gradient parameter
-lam = np.zeros_like(theta)
-for i in range(N2):
-    lam[i] = ((rho*theta[i]**2)/mu)*(dvdxExt[i])
+thetaUpper = np.zeros(len(sUpper),dtype=float)
+thetaLower = np.zeros(len(sLower),dtype=float)
+
+# computing the first value at the stagnation point
+thetaUpper[0] = sqrt(0.75*nu/abs((VeUpper[1]-VeUpper[0])/(sUpper[1]-sUpper[0])))
+thetaLower[0] = sqrt(0.75*nu/abs((VeLower[1]-VeLower[0])/(sLower[1]-sLower[0])))
+
+# integration using the trapezoidal rule: Numpy function np.trapz
+for i in range(1,len(thetaUpper)):
+    thetaUpper[i] = sqrt(0.45*nu/VeUpper[i]**6*np.trapz(VeUpper[0:i+1]**5,sUpper[0:i+1]))
+for i in range(1,len(thetaLower)):
+    thetaLower[i] = sqrt(0.45*nu/VeLower[i]**6*np.trapz(VeLower[0:i+1]**5,sLower[0:i+1]))
+ 
+# code credit here and up Olivier Mesnard   
     
-# calculating shape factor H from lambda (lam)
-H = np.zeros_like(lam)
-for i in range(N2):
-    if lam[i]>0 and lam[i]<0.1:
-        H[i] = 2.61-3.75*lam[i]+5.24*lam[i]**2
-    if lam[i]>-0.1 and lam[i]<0:
-        H[i] = 2.088+(0.0731/(lam[i]+0.14))
-        
+dVedsUpper = np.zeros(len(VeUpper),dtype=float)
+dVedsLower = np.zeros(len(VeLower),dtype=float)
+
+# calculating the gradient of velocity
+dVedsUpper = np.gradient(VeUpper)
+dVedsLower = np.gradient(VeLower)
+                                                
+lambdaUpper = np.zeros(len(sUpper),dtype=float)
+lambdaLower = np.zeros(len(sLower),dtype=float)
+
+for i in range(len(lambdaUpper)):
+    lambdaUpper[i] = ((rho*thetaUpper[i]**2)/mu)*(dVedsUpper[i])
+    lambdaUpper[i] = ((rho*thetaUpper[i]**2)/mu)*(dVedsLower[i])
+    
+HUpper = np.zeros(len(sUpper),dtype=float)
+HLower = np.zeros(len(sLower),dtype=float)
+
+for i in range(len(HUpper)):
+    if lambdaUpper[i]>0 and lambdaUpper[i]<0.1:
+        HUpper[i] = 2.61-3.75*lambdaUpper[i]+5.24*lambdaUpper[i]**2
+    if lambdaUpper[i]>-0.1 and lambdaUpper[i]<0:
+        HUpper[i] = 2.088+(0.0731/(lambdaUpper[i]+0.14))
+
+deltaUpper = np.zeros(len(sUpper),dtype=float)
+deltaLower = np.zeros(len(sLower),dtype=float)
+
 # calculating displacement thickness
-disp = H*theta
+deltaUpper = HUpper*thetaUpper
+deltaLower = HLower*thetaLower
 
 # creating separate position arrays for plotting
-xcExt = [p.xc for p in panel if p.loc=='extrados']
-xcInt = [p.xc for p in panel if p.loc=='intrados']
-ycExt = [p.yc for p in panel if p.loc=='extrados']
-ycInt = [p.yc for p in panel if p.loc=='intrados']
+xcLower = [p.xc for p in panel if p.loc=='intrados']
+ycLower = [p.yc for p in panel if p.loc=='intrados']
 
-betaExt = [p.beta for p in panel if p.loc=='extrados']
-betaInt = [p.beta for p in panel if p.loc=='intrados']
+xcUpper = [p.xc for p in panel if p.loc=='extrados']
+ycUpper = [p.yc for p in panel if p.loc=='extrados']
+
+betaUpper = [p.beta for p in panel if p.loc=='extrados']
+betaLower = [p.beta for p in panel if p.loc=='intrados']
+
+xDeltaUpper = np.zeros(len(sUpper),dtype=float)
+xDeltaLower = np.zeros(len(sLower),dtype=float)
+yDeltaUpper = np.zeros(len(sUpper),dtype=float)
+yDeltaLower = np.zeros(len(sLower),dtype=float)
 
 # adding the height of the displacement thickness to the airfoil
-for i in range(N2):
-    xDisp = disp[i]*np.cos(betaExt[i])+xcExt
-    yDisp = disp[i]*np.sin(betaExt[i])+ycExt
+for i in range(len(xcUpper)):
+    xDeltaUpper = deltaUpper[i]*np.cos(betaUpper[i])+xcUpper
+    yDeltaUpper = deltaUpper[i]*np.sin(betaUpper[i])+ycUpper
     
-for i in range(N2):
-    xTheta = theta[i]*np.cos(betaExt[i])+xcExt
-    yTheta = theta[i]*np.sin(betaExt[i])+ycExt    
-    
+for i in range(len(ycUpper)):
+    xThetaUpper = thetaUpper[i]*np.cos(betaUpper[i])+xcUpper
+    yThetaUpper = thetaUpper[i]*np.sin(betaUpper[i])+ycUpper      
+
+
 # plotting the discretized geometry
 valX,valY = 0.1,0.2
 xmin,xmax = min([p.xa for p in panel]),max([p.xa for p in panel])
@@ -324,7 +319,7 @@ plt.title('Displacement Thickness')
 plt.xlim(xStart,xEnd)
 plt.ylim(yStart,yEnd)
 plt.plot(xp,yp,'k-',linewidth=2)
-plt.plot(xDisp,yDisp,linewidth=2)
+plt.plot(xDeltaUpper,yDeltaUpper,linewidth=2)
 
 # plotting the discretized geometry
 valX,valY = 0.1,0.2
@@ -341,23 +336,69 @@ plt.title('Momentum Thickness')
 plt.xlim(xStart,xEnd)
 plt.ylim(yStart,yEnd)
 plt.plot(xp,yp,'k-',linewidth=2)
-plt.plot(xTheta,yTheta,linewidth=2)
-
+plt.plot(xThetaUpper,yThetaUpper,linewidth=2)
+plt.show()
 
 # -------- Michaels Tranision Criterion -----------
 
 # the criterion is entirely based on the reynolds numbers computed below
-ReTheta = np.zeros_like(vtExt)
+ReTheta = np.zeros_like(VeUpper)
 ReS = np.zeros_like(ReTheta)
 mc = np.zeros_like(ReS)                         # transition criterion   
 
-for i in range(N2):
-    ReTheta[i] = (rho*vtExt[i]*theta[i])/mu     # Re based on momentum thickness
-    ReS[i] = (rho*vtExt[i]*sExt[i])/mu          # Re based on position
+for i in range(1,len(mc)-1):
+    ReTheta[i] = (rho*VeUpper[i]*thetaUpper[i])/mu     # Re based on momentum thickness
+    ReS[i] = (rho*VeUpper[i]*sUpper[i])/mu          # Re based on position
     mc[i] = 1.174*(1+(22400/ReS[i]))*ReS[i]**0.46 # transition criterion
     if mc[i]<ReTheta[i]:
-        print 'Transition point at: ', sExt[i]
+        print 'Transition point at: ', sUpper[i]
+        sTrans = i                      # used to overwrite in head's
         break
         
 # ------------- Head's Method --------------
 
+# defining the four equations to solve for the four unknowns
+
+# skin friction
+def cf(theta,H,Ve,nu):
+    return 0.246*10.**(-0.678*H)*(theta*Ve/nu)**(-0.268)
+    
+# entrainment shape factor
+def fH1(H):
+    if (H<=1.6): return 3.3 + 0.8234*(H-1.1)**(-1.287)
+    else: return 3.3 + 1.5501*(H-0.6678)**(-3.064)
+    
+# shape factor    
+def fH(H1):
+    H = 1.1 + ((H1-3.3)/0.8234)**(-1./1.287)
+    if (H<=1.6): return H
+    else: return 0.6678 + ((H1-3.3)/1.5501)**(-1./3.064)
+    
+# von Karman momentum integral equation    
+def F(H1):
+    return 0.0306*(H1-3.)**(-0.6169)
+    
+def RHS1(theta,H,Ve,nu,dVeds):
+    return 0.5*cf(theta,H,Ve,nu) - theta/Ve*(2+H)*dVeds
+
+def RHS2(H1,theta,H,Ve,nu,dVeds):
+    return -H1/theta*RHS1(theta,H,Ve,nu,dVeds) - H1/Ve*dVeds + F(H1)
+    
+            
+theta = np.zeros(Nb,dtype=float)
+H1 = np.zeros(Nb,dtype=float)
+H = np.zeros(Nb,dtype=float)
+
+Ve = np.zeros(Nb,dtype=float)
+dVeds = np.zeros(Nb,dtype=float)
+
+
+# advancing to the next point
+for i in range(Nb-1):
+    h = s[i+1]-s[i]
+    theta[i+1] = theta[i] + h*RHS1(theta[i],H[i],Ve[i],nu,dVeds[i])
+    H1[i+1] = H1[i] + h*RHS2(H1[i],theta[i],H[i],Ve[i],nu,dVeds[i])
+    H[i+1] = fH(H1[i+1])
+
+
+    
