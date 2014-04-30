@@ -65,7 +65,7 @@ def definePanels(N,xp,yp):
         
     return panel
     
-N = 30                      #  number of panels <----------------
+N = 100                      #  number of panels <----------------
 panel = definePanels(N,xp,yp)   # discretization of the geometry into panels
 
 # ------------ defining freestream conditions -----------
@@ -77,7 +77,7 @@ class Freestream:
         self.alpha = alpha*pi/180       # angle of attack
 
 # defining parameters for above class
-Uinf = 100.0                              # freestream velocity
+Uinf = 10.0                              # freestream velocity
 alpha = 0.0                             # angle of attack
 freestream = Freestream(Uinf,alpha)     # instant of object freestream
 
@@ -326,7 +326,7 @@ def fH1(H):
         return 3.3 + 0.8234*(H-1.1)**(-1.287)
     else: return 3.3 + 1.5501*(H-0.6678)**(-3.064)
 
-# shape factor    
+# shape factor, the inverse function
 def fH(H1):
     H = 1.1 + ((H1-3.3)/0.8234)**(-(1./1.287))
     if (H<=1.6):
@@ -334,14 +334,17 @@ def fH(H1):
     else: return 0.6678 + ((H1-3.3)/1.5501)**(-(1./3.064))
     
 # von Karman momentum integral equation    
-def F(H1):
-    return 0.0306*(H1-3.)**(-0.6169)
+def F(H1,Ve):
+    return 0.0306*Ve*(H1-3.)**(-0.6169)
     
 def RHS1(theta,H,Ve,nu,dVeds):
     return 0.5*cf(theta,H,Ve,nu) - theta/Ve*(2+H)*dVeds
 
+#def RHS2(H1,theta,H,Ve,nu,dVeds):
+#    return -H1/theta*RHS1(theta,H,Ve,nu,dVeds) - H1/Ve*dVeds + F(H1,Ve)
+
 def RHS2(H1,theta,H,Ve,nu,dVeds):
-    return -H1/theta*RHS1(theta,H,Ve,nu,dVeds) - H1/Ve*dVeds + F(H1)
+    return F(H1,Ve)/(Ve*RHS1(theta,H,Ve,nu,dVeds) + theta*dVeds)
             
 H1Upper = np.zeros(len(sUpper),dtype=float)
 
@@ -352,14 +355,10 @@ thetaUpper[iTrans] = thetaTrans
 
 # advancing to the next point
 for i in range(iTrans,len(sUpper)-1):
-    print 'i = ', i
     h = sUpper[i+1]-sUpper[i]
     thetaUpper[i+1] = thetaUpper[i] + h*RHS1(thetaUpper[i],HUpper[i],VeUpper[i],nu,dVedsUpper[i])
-    print 'thetaUpper = ', thetaUpper[i+1]
     H1Upper[i+1] = H1Upper[i] + h*RHS2(H1Upper[i],thetaUpper[i],HUpper[i],VeUpper[i],nu,dVedsUpper[i])
-    print 'H1Upper = ', H1Upper[i+1],
     HUpper[i+1] = fH(H1Upper[i+1])
-#    print 'HUpper next = ', HUpper[i+1]
     
     
 deltaUpper = np.zeros(len(sUpper),dtype=float)
@@ -432,4 +431,4 @@ plt.xlim(xStart,xEnd)
 plt.ylim(yStart,yEnd)
 plt.plot(xp,yp,'k-',linewidth=2)
 plt.plot(xThetaUpper,yThetaUpper,linewidth=2)
-    
+plt.show()  
