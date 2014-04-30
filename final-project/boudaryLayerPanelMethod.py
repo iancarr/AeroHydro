@@ -77,7 +77,7 @@ class Freestream:
         self.alpha = alpha*pi/180       # angle of attack
 
 # defining parameters for above class
-Uinf = 10.0                              # freestream velocity
+Uinf = 100.0                              # freestream velocity
 alpha = 0.0                             # angle of attack
 freestream = Freestream(Uinf,alpha)     # instant of object freestream
 
@@ -284,14 +284,14 @@ lLower = np.zeros(len(sLower),dtype=float)
 for i in range(len(sUpper)):
     if lambdaUpper[i]>0 and lambdaUpper[i]<0.1:
         lUpper[i] = 0.22+1.402*lambdaUpper[i] + (0.018*lambdaUpper[i])/(lambdaUpper[i]+0.107)
-    if lambdaUpper[i]<-0.1 and lambdaUpper[i]<=0:
+    if lambdaUpper[i]>-0.1 and lambdaUpper[i]<=0:
         lUpper[i] = 2.088+(0.0731)/(lambdaUpper[i]+0.14)
         
 cfUpper = np.zeros(len(sUpper),dtype=float)
 cfLower = np.zeros(len(sLower),dtype=float)
 
 for i in range(len(sUpper)):
-    cfUpper[i] = 2*lUpper*(VeUpper[i]*thetaUpper[i]/nu)
+    cfUpper[i] = 2*lUpper[i]*(VeUpper[i]*thetaUpper[i]/nu)
 
 # -------- Michaels Tranision Criterion -----------
 
