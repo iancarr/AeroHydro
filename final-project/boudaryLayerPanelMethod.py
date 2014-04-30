@@ -65,7 +65,7 @@ def definePanels(N,xp,yp):
         
     return panel
     
-N = 50                      #  number of panels <----------------
+N = 30                      #  number of panels <----------------
 panel = definePanels(N,xp,yp)   # discretization of the geometry into panels
 
 # ------------ defining freestream conditions -----------
@@ -77,7 +77,7 @@ class Freestream:
         self.alpha = alpha*pi/180       # angle of attack
 
 # defining parameters for above class
-Uinf = 100.0                              # freestream velocity
+Uinf = 10.0                              # freestream velocity
 alpha = 0.0                             # angle of attack
 freestream = Freestream(Uinf,alpha)     # instant of object freestream
 
@@ -277,7 +277,22 @@ for i in range(len(HUpper)):
         HUpper[i] = 2.61-3.75*lambdaUpper[i]+5.24*lambdaUpper[i]**2
     if lambdaUpper[i]>-0.1 and lambdaUpper[i]<=0:
         HUpper[i] = 2.088+(0.0731/(lambdaUpper[i]+0.14))
+
+lUpper = np.zeros(len(sUpper),dtype=float)
+lLower = np.zeros(len(sLower),dtype=float)
+
+for i in range(len(sUpper)):
+    if lambdaUpper[i]>0 and lambdaUpper[i]<0.1:
+        lUpper[i] = 0.22+1.402*lambdaUpper[i] + (0.018*lambdaUpper[i])/(lambdaUpper[i]+0.107)
+    if lambdaUpper[i]<-0.1 and lambdaUpper[i]<=0:
+        lUpper[i] = 2.088+(0.0731)/(lambdaUpper[i]+0.14)
         
+cfUpper = np.zeros(len(sUpper),dtype=float)
+cfLower = np.zeros(len(sLower),dtype=float)
+
+for i in range(len(sUpper)):
+    cfUpper[i] = 2*lUpper*(VeUpper[i]*thetaUpper[i]/nu)
+
 # -------- Michaels Tranision Criterion -----------
 
 # the criterion is entirely based on the reynolds numbers computed below
@@ -313,10 +328,10 @@ def fH1(H):
 
 # shape factor    
 def fH(H1):
-    H = 1.1 + ((H1-3.3)/0.8234)**(-1./1.287)
+    H = 1.1 + ((H1-3.3)/0.8234)**(-(1./1.287))
     if (H<=1.6):
-         return H
-    else: return 0.6678 + ((H1-3.3)/1.5501)**(-1./3.064)
+        return H
+    else: return 0.6678 + ((H1-3.3)/1.5501)**(-(1./3.064))
     
 # von Karman momentum integral equation    
 def F(H1):
@@ -327,7 +342,6 @@ def RHS1(theta,H,Ve,nu,dVeds):
 
 def RHS2(H1,theta,H,Ve,nu,dVeds):
     return -H1/theta*RHS1(theta,H,Ve,nu,dVeds) - H1/Ve*dVeds + F(H1)
-    
             
 H1Upper = np.zeros(len(sUpper),dtype=float)
 
@@ -338,10 +352,14 @@ thetaUpper[iTrans] = thetaTrans
 
 # advancing to the next point
 for i in range(iTrans,len(sUpper)-1):
+    print 'i = ', i
     h = sUpper[i+1]-sUpper[i]
     thetaUpper[i+1] = thetaUpper[i] + h*RHS1(thetaUpper[i],HUpper[i],VeUpper[i],nu,dVedsUpper[i])
+    print 'thetaUpper = ', thetaUpper[i+1]
     H1Upper[i+1] = H1Upper[i] + h*RHS2(H1Upper[i],thetaUpper[i],HUpper[i],VeUpper[i],nu,dVedsUpper[i])
+    print 'H1Upper = ', H1Upper[i+1],
     HUpper[i+1] = fH(H1Upper[i+1])
+#    print 'HUpper next = ', HUpper[i+1]
     
     
 deltaUpper = np.zeros(len(sUpper),dtype=float)
@@ -414,5 +432,4 @@ plt.xlim(xStart,xEnd)
 plt.ylim(yStart,yEnd)
 plt.plot(xp,yp,'k-',linewidth=2)
 plt.plot(xThetaUpper,yThetaUpper,linewidth=2)
-plt.show()
     
