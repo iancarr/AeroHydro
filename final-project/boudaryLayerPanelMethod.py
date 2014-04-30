@@ -77,7 +77,7 @@ class Freestream:
         self.alpha = alpha*pi/180       # angle of attack
 
 # defining parameters for above class
-Uinf = 10.0                              # freestream velocity
+Uinf = 100.0                              # freestream velocity
 alpha = 0.0                             # angle of attack
 freestream = Freestream(Uinf,alpha)     # instant of object freestream
 
@@ -252,9 +252,15 @@ for i in range(1,len(thetaLower)):
 dVedsUpper = np.zeros(len(VeUpper),dtype=float)
 dVedsLower = np.zeros(len(VeLower),dtype=float)
 
+# defining fucntion to calculate derivative
+def gradient(y,x):
+    return np.gradient(y,np.append(x[1]-x[0],x[1:len(x)]-x[0:len(x)-1]))
+
 # calculating the gradient of velocity
-dVedsUpper = np.gradient(VeUpper)
-dVedsLower = np.gradient(VeLower)
+dVedsUpper = gradient(VeUpper,sUpper)
+dVedsLower = gradient(VeLower,sUpper)
+
+plt.plot(sUpper,dVedsUpper)
                                                 
 lambdaUpper = np.zeros(len(sUpper),dtype=float)
 lambdaLower = np.zeros(len(sLower),dtype=float)
@@ -269,15 +275,82 @@ HLower = np.zeros(len(sLower),dtype=float)
 for i in range(len(HUpper)):
     if lambdaUpper[i]>0 and lambdaUpper[i]<0.1:
         HUpper[i] = 2.61-3.75*lambdaUpper[i]+5.24*lambdaUpper[i]**2
-    if lambdaUpper[i]>-0.1 and lambdaUpper[i]<0:
+    if lambdaUpper[i]>-0.1 and lambdaUpper[i]<=0:
         HUpper[i] = 2.088+(0.0731/(lambdaUpper[i]+0.14))
+        
+# -------- Michaels Tranision Criterion -----------
 
+# the criterion is entirely based on the reynolds numbers computed below
+ReTheta = np.zeros_like(VeUpper)
+ReS = np.zeros_like(ReTheta)
+mc = np.zeros_like(ReS)                         # transition criterion   
+
+for i in range(1,len(mc)-1):
+    ReTheta[i] = (rho*VeUpper[i]*thetaUpper[i])/mu     # Re based on momentum thickness
+    ReS[i] = (rho*VeUpper[i]*sUpper[i])/mu             # Re based on position
+    mc[i] = 1.174*(1+(22400/ReS[i]))*ReS[i]**0.46      # transition criterion
+    if mc[i]<ReTheta[i]:
+        print 'Transition point at: ', sUpper[i]
+        iTrans = i
+        sTrans = sUpper[i]                      # used to overwrite in head's
+        thetaTrans = thetaUpper[i]
+        HTrans = HUpper[i-1]
+        break
+        
+# ------------- Head's Method --------------
+
+# defining the four equations to solve for the four unknowns
+
+# skin friction
+def cf(theta,H,Ve,nu):
+    return 0.246*10.**(-0.678*H)*(theta*Ve/nu)**(-0.268)
+    
+# entrainment shape factor
+def fH1(H):
+    if (H<=1.6): 
+        return 3.3 + 0.8234*(H-1.1)**(-1.287)
+    else: return 3.3 + 1.5501*(H-0.6678)**(-3.064)
+
+# shape factor    
+def fH(H1):
+    H = 1.1 + ((H1-3.3)/0.8234)**(-1./1.287)
+    if (H<=1.6):
+         return H
+    else: return 0.6678 + ((H1-3.3)/1.5501)**(-1./3.064)
+    
+# von Karman momentum integral equation    
+def F(H1):
+    return 0.0306*(H1-3.)**(-0.6169)
+    
+def RHS1(theta,H,Ve,nu,dVeds):
+    return 0.5*cf(theta,H,Ve,nu) - theta/Ve*(2+H)*dVeds
+
+def RHS2(H1,theta,H,Ve,nu,dVeds):
+    return -H1/theta*RHS1(theta,H,Ve,nu,dVeds) - H1/Ve*dVeds + F(H1)
+    
+            
+H1Upper = np.zeros(len(sUpper),dtype=float)
+
+# initial condition (at the transition point)
+H1Upper[iTrans] = fH1(HTrans)
+HUpper[iTrans] = HTrans
+thetaUpper[iTrans] = thetaTrans
+
+# advancing to the next point
+for i in range(iTrans,len(sUpper)-1):
+    h = sUpper[i+1]-sUpper[i]
+    thetaUpper[i+1] = thetaUpper[i] + h*RHS1(thetaUpper[i],HUpper[i],VeUpper[i],nu,dVedsUpper[i])
+    H1Upper[i+1] = H1Upper[i] + h*RHS2(H1Upper[i],thetaUpper[i],HUpper[i],VeUpper[i],nu,dVedsUpper[i])
+    HUpper[i+1] = fH(H1Upper[i+1])
+    
+    
 deltaUpper = np.zeros(len(sUpper),dtype=float)
 deltaLower = np.zeros(len(sLower),dtype=float)
 
 # calculating displacement thickness
 deltaUpper = HUpper*thetaUpper
-deltaLower = HLower*thetaLower
+ 
+# --------------- Plotting --------------
 
 # creating separate position arrays for plotting
 xcLower = [p.xc for p in panel if p.loc=='intrados']
@@ -294,15 +367,19 @@ xDeltaLower = np.zeros(len(sLower),dtype=float)
 yDeltaUpper = np.zeros(len(sUpper),dtype=float)
 yDeltaLower = np.zeros(len(sLower),dtype=float)
 
+xThetaUpper = np.zeros(len(sUpper),dtype=float)
+xThetaLower = np.zeros(len(sLower),dtype=float)
+yThetaUpper = np.zeros(len(sUpper),dtype=float)
+yThetaLower = np.zeros(len(sLower),dtype=float)   
+
 # adding the height of the displacement thickness to the airfoil
 for i in range(len(xcUpper)):
-    xDeltaUpper = deltaUpper[i]*np.cos(betaUpper[i])+xcUpper
-    yDeltaUpper = deltaUpper[i]*np.sin(betaUpper[i])+ycUpper
+    xDeltaUpper[i] = deltaUpper[i]*np.cos(betaUpper[i])+xcUpper[i]
+    yDeltaUpper[i] = deltaUpper[i]*np.sin(betaUpper[i])+ycUpper[i]
     
 for i in range(len(ycUpper)):
-    xThetaUpper = thetaUpper[i]*np.cos(betaUpper[i])+xcUpper
-    yThetaUpper = thetaUpper[i]*np.sin(betaUpper[i])+ycUpper      
-
+    xThetaUpper[i] = thetaUpper[i]*np.cos(betaUpper[i])+xcUpper[i]
+    yThetaUpper[i] = thetaUpper[i]*np.sin(betaUpper[i])+ycUpper[i]  
 
 # plotting the discretized geometry
 valX,valY = 0.1,0.2
@@ -338,67 +415,4 @@ plt.ylim(yStart,yEnd)
 plt.plot(xp,yp,'k-',linewidth=2)
 plt.plot(xThetaUpper,yThetaUpper,linewidth=2)
 plt.show()
-
-# -------- Michaels Tranision Criterion -----------
-
-# the criterion is entirely based on the reynolds numbers computed below
-ReTheta = np.zeros_like(VeUpper)
-ReS = np.zeros_like(ReTheta)
-mc = np.zeros_like(ReS)                         # transition criterion   
-
-for i in range(1,len(mc)-1):
-    ReTheta[i] = (rho*VeUpper[i]*thetaUpper[i])/mu     # Re based on momentum thickness
-    ReS[i] = (rho*VeUpper[i]*sUpper[i])/mu          # Re based on position
-    mc[i] = 1.174*(1+(22400/ReS[i]))*ReS[i]**0.46 # transition criterion
-    if mc[i]<ReTheta[i]:
-        print 'Transition point at: ', sUpper[i]
-        sTrans = i                      # used to overwrite in head's
-        break
-        
-# ------------- Head's Method --------------
-
-# defining the four equations to solve for the four unknowns
-
-# skin friction
-def cf(theta,H,Ve,nu):
-    return 0.246*10.**(-0.678*H)*(theta*Ve/nu)**(-0.268)
-    
-# entrainment shape factor
-def fH1(H):
-    if (H<=1.6): return 3.3 + 0.8234*(H-1.1)**(-1.287)
-    else: return 3.3 + 1.5501*(H-0.6678)**(-3.064)
-    
-# shape factor    
-def fH(H1):
-    H = 1.1 + ((H1-3.3)/0.8234)**(-1./1.287)
-    if (H<=1.6): return H
-    else: return 0.6678 + ((H1-3.3)/1.5501)**(-1./3.064)
-    
-# von Karman momentum integral equation    
-def F(H1):
-    return 0.0306*(H1-3.)**(-0.6169)
-    
-def RHS1(theta,H,Ve,nu,dVeds):
-    return 0.5*cf(theta,H,Ve,nu) - theta/Ve*(2+H)*dVeds
-
-def RHS2(H1,theta,H,Ve,nu,dVeds):
-    return -H1/theta*RHS1(theta,H,Ve,nu,dVeds) - H1/Ve*dVeds + F(H1)
-    
-            
-theta = np.zeros(Nb,dtype=float)
-H1 = np.zeros(Nb,dtype=float)
-H = np.zeros(Nb,dtype=float)
-
-Ve = np.zeros(Nb,dtype=float)
-dVeds = np.zeros(Nb,dtype=float)
-
-
-# advancing to the next point
-for i in range(Nb-1):
-    h = s[i+1]-s[i]
-    theta[i+1] = theta[i] + h*RHS1(theta[i],H[i],Ve[i],nu,dVeds[i])
-    H1[i+1] = H1[i] + h*RHS2(H1[i],theta[i],H[i],Ve[i],nu,dVeds[i])
-    H[i+1] = fH(H1[i+1])
-
-
     
