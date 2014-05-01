@@ -382,9 +382,12 @@ betaLower = [p.beta for p in panel if p.loc=='intrados']
 xDeltaUpper = np.zeros(len(sUpper),dtype=float)
 yDeltaUpper = np.zeros(len(sUpper),dtype=float)
 
+# flipping the order such that it can be mapped (not 100% sure)
+deltaUpper = deltaUpper[::-1]
+
 for i in range(len(xcUpper)):
-    xDeltaUpper[i] = deltaUpper[i]*np.cos(betaUpper[i])+xcUpper[i]
-    yDeltaUpper[i] = deltaUpper[i]*np.sin(betaUpper[i])+ycUpper[i]
+    xDeltaUpper[i] = (deltaUpper[i]*np.cos(betaUpper[i]))*10+xcUpper[i]
+    yDeltaUpper[i] = (deltaUpper[i]*np.sin(betaUpper[i]))*10+ycUpper[i]
 
 # plotting the discretized geometry
 valX,valY = 0.1,0.2
