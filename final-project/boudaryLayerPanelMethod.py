@@ -65,7 +65,7 @@ def definePanels(N,xp,yp):
         
     return panel
     
-N = 30                      #  number of panels <----------------
+N = 100                      #  number of panels <----------------
 panel = definePanels(N,xp,yp)   # discretization of the geometry into panels
 
 # ------------ defining freestream conditions -----------
@@ -77,7 +77,7 @@ class Freestream:
         self.alpha = alpha*pi/180       # angle of attack
 
 # defining parameters for above class
-Uinf = 30.0                              # freestream velocity
+Uinf = 300.0                              # freestream velocity
 alpha = 0.0                             # angle of attack
 freestream = Freestream(Uinf,alpha)     # instant of object freestream
 
